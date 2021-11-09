@@ -2,7 +2,7 @@
 State Machine
 #############
 
-``httpq`` comes with a state machine that can be used to control a stream of data coming in from a socket, or socket-like object (io). A :py:class:`httpq.httpq.Message` has an internal variable called ``state`` that is used to keep track of the state of the message. There are four states, as defined in :py:class:`httpq.httpq.state`:
+``httpq`` comes with a state machine that can be used to control a stream of data coming in from a socket, or socket-like object (io). A :py:class:`httpq.httpq.Message` has an internal variable called ``state`` that is used to keep track of the state of the message. There are three states, as defined in :py:class:`httpq.httpq.state`:
 
 .. autoclass:: httpq.httpq.state
     :members:
@@ -93,11 +93,11 @@ The method in which we use to step the state machine (and in turn receive the cu
     state.HEADER b'HTTP/1.1 200 OK\r\nDate: Tue, 09 Nov 2021 18:29:18 GMT\r\nContent-Type: application/json\r\nContent-Length: 197\r\nConnection: keep-alive\r\nServer: gunicorn/19.9.0\r\nAccess-Control-Allow-Origin: *\r\nAccess-Control-Allow-Credentials'
     state.BODY b'HTTP/1.1 200 OK\r\nDate: Tue, 09 Nov 2021 18:29:18 GMT\r\nContent-Type: application/json\r\nContent-Length: 197\r\nConnection: keep-alive\r\nServer: gunicorn/19.9.0\r\nAccess-Control-Allow-Origin: *\r\nAccess-Control-Allow-Credentials: true\r\n\r\n'
 
-Once we have reached the `BODY` state, there are no further states. This is useful because it allows the user to dictate how much data to read from the io, and if need be how the handle that incoming data. This leads us into the second note: notice how the body is then gathered:
+Once we have reached the `BODY` state, there are no further states. This is useful because it allows the user to dictate how much data to read from the io, and if need be, how to handle the incoming data. This leads us into the second note: notice how the body is then gathered:
 
 .. code-block:: python
 
     while len(resp.body) != resp.headers["Content-Length"]:
         resp.body += s.recv(10)
 
-In this specific case we have decided to store the body into memory, and have (assumed) the server will always respond with ``Content-Length`` as a header. This is a very naive approach, and is not recommended for more complex applications- however, it serves as a good example of how one can then use a message in the `BODY` state to continue reading data from the io.
+In this specific case we have decided to store the body into memory and assumed the server will always respond with the ``Content-Length`` header. This, in reality, is a very naive approach and is not recommended for more complex applications- it serves, however, as a good example on how one can then use a message in the `BODY` state to continue reading data until its termination.
