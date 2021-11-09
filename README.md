@@ -46,18 +46,18 @@ Parses an entire raw HTTP message.
 
 ```python
 req = httpq.Request.parse(
-    "GET /get HTTP/1.1\r\n"
-    "Host: httpbin.org\r\n"
-    "Content-Length: 12\r\n"
-    "\r\n"
-    "Hello world!"
+    b"GET /get HTTP/1.1\r\n"
+    b"Host: httpbin.org\r\n"
+    b"Content-Length: 12\r\n"
+    b"\r\n"
+    b"Hello world!"
 )
 
 resp = httpq.Response.parse(
-    "HTTP/1.1 200 OK\r\n"
-    "Content-Length: 12\r\n"
-    "\r\n"
-    "Hello world!"
+    b"HTTP/1.1 200 OK\r\n"
+    b"Content-Length: 12\r\n"
+    b"\r\n"
+    b"Hello world!"
 )
 ```
 
@@ -67,17 +67,17 @@ Parse chunks of a raw HTTP message.
 
 ```python
 req = httpq.Request()
-req.feed("GET /get HTTP/1.1\r\n")
-req.feed("Host: httpbin.org\r\n")
-req.feed("Content-Length: 18\r\n")
-req.feed("\r\n")
-req.feed("Hello world!")
+req.feed(b"GET /get HTTP/1.1\r\n")
+req.feed(b"Host: httpbin.org\r\n")
+req.feed(b"Content-Length: 18\r\n")
+req.feed(b"\r\n")
+req.feed(b"Hello world!")
 
 resp = httpq.Response()
-resp.feed("HTTP/1.1 200 OK\r\n")
-resp.feed("Content-Length: 12\r\n")
-resp.feed("\r\n")
-resp.feed("Hello world!")
+resp.feed(b"HTTP/1.1 200 OK\r\n")
+resp.feed(b"Content-Length: 12\r\n")
+resp.feed(b"\r\n")
+resp.feed(b"Hello world!")
 ```
 
 The feed mechanism, different from the other two methods of initializing a message, is intended to be used with the built-in state machine. 

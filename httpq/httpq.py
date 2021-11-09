@@ -154,7 +154,7 @@ class Message(ABC):
         return self.state
 
     @abstractmethod
-    def _parse_top(self, line: bytes):
+    def _parse_top(self, line: bytes):  # pragma: no cover
         """
         Parses the first line of the HTTP message.
         """
@@ -170,10 +170,11 @@ class Message(ABC):
         """
         obj = cls()
         obj.feed(msg)
+        obj.step_state()
         return obj
 
     @abstractmethod
-    def _compile_top(self):
+    def _compile_top(self):  # pragma: no cover
         """
         Compiles the first line of the HTTP message.
         """
@@ -201,7 +202,7 @@ class Message(ABC):
             arrow = "→ "
         elif self.__class__ == Response:
             arrow = "← "
-        else:
+        else:  # pragma: no cover
             arrow = "? "
 
         return arrow + arrow.join(self._compile().decode("utf-8").splitlines(True))
@@ -234,17 +235,14 @@ class Request(Message):
         self.target = target
 
         objs = [self.method, self.target, self.protocol]
-        if all(obj for obj in objs):
+        if all(obj == None for obj in objs):
             self.state = state.TOP
-        elif all(obj == None for obj in objs):
-            self.state = state.NEED_MORE_DATA
+        elif all(obj for obj in objs):
+            self.state = state.HEADER
         else:
             raise ValueError("Request must have method, target, and protocol.")
 
-        if self.headers:
-            self.state = state.HEADER
-
-        if self.body:
+        if self.headers or self.body:
             self.state = state.BODY
 
     def _parse_top(self, line: bytes):
@@ -287,17 +285,14 @@ class Response(Message):
         self.reason = reason
 
         objs = [self.protocol, self.status, self.reason]
-        if all(obj for obj in objs):
+        if all(obj == None for obj in objs):
             self.state = state.TOP
-        elif all(obj == None for obj in objs):
-            self.state = state.NEED_MORE_DATA
+        elif all(obj for obj in objs):
+            self.state = state.HEADER
         else:
             raise ValueError("Response must have protocol, status, and reason.")
 
-        if self.headers:
-            self.state = state.HEADER
-
-        if self.body:
+        if self.headers or self.body:
             self.state = state.BODY
 
     def _parse_top(self, line: bytes):
