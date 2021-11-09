@@ -1,0 +1,20 @@
+# Env
+.DS_Store
+.ropeproject
+.python-version
+.vscode
+openssl
+
+# Python
+__pycache__
+*.egg-info
+.eggs
+dist
+build
+
+# Documentation
+docs/build/
+
+# PyTest + Coverage
+.pytest_cache
+.coverage
