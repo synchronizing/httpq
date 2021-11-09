@@ -84,7 +84,7 @@ Parse chunks of a raw HTTP message.
     resp.feed("\r\n")
     resp.feed("Hello world!") 
 
-The feed mechanism, different from the other two methods of initializing a message as it can be used with the built-in state machine. 
+The feed mechanism, different from the other two methods of initializing a message, is intended to be used with the built-in state machine. 
 
 When parsing a message from a stream the state machine keeps track of *where* in the message the parser is. This allows more advance parsing and mechanism to be built.
 
@@ -112,7 +112,7 @@ When parsing a message from a stream the state machine keeps track of *where* in
     while len(body) != resp.headers["Content-Length"]:
         body += s.recv(10)
 
-Note that the feed mechanism is used in conjunction with the ``step_state`` method. This allows the state machine to be stepped through and the parser to be advanced. We can use this parse until the body of the message, and then use the captured headers to parse the body.
+Note that the feed mechanism is used in conjunction with the `step_state` method. This allows the state machine to be stepped through and the parser to be advanced. We can use this parse until the body of the message, and then use the captured headers to parse the body.
 
 Modifying and Comparisons
 *************************

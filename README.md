@@ -1,6 +1,6 @@
 # 🏃‍♂️ httpq
 
-A module to parse, modify, and compile HTTP/1.1 messages with a simple built-in state machine. It was build from the ground up with the intention of being quick, simple, and easy to use.
+A module to parse, modify, and compile HTTP/1.1 messages with a simple built-in state machine.
 
 ## Installing
 
@@ -10,7 +10,7 @@ pip install httpq
 
 ## Documentation
 
-Documentation can be found [here]().
+Documentation can be found [here](https://synchronizing.github.io/httpq/).
 
 ## Using
 
@@ -80,7 +80,7 @@ resp.feed("\r\n")
 resp.feed("Hello world!")
 ```
 
-The feed mechanism, different from the other two methods of initializing a message as it can be used with the built-in state machine. 
+The feed mechanism, different from the other two methods of initializing a message, is intended to be used with the built-in state machine. 
 
 When parsing a message from a stream the state machine keeps track of *where* in the message the parser is. This allows more advance parsing and mechanism to be built.
 
@@ -149,7 +149,7 @@ resp.status == "200"    # >>> True
 resp.status == b"200"   # >>> True
 ```
 
-Once the object is modified to the user's preference utilizing the `Request` and `Response` object is as easy as calling a property (specifically .raw):
+Once the object is modified to the user's preference utilizing the `Request` and `Response` object is as easy as calling a property (specifically `.raw`):
 
 ```python
 print(req.raw)
