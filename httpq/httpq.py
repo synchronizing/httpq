@@ -1,3 +1,7 @@
+"""
+`httpq` implementation.
+"""
+
 import enum
 from abc import ABC, abstractmethod
 from typing import Any, Optional, Union
@@ -13,27 +17,41 @@ from toolbox.collections.mapping import (
 
 class state(enum.Enum):
     """
-    The state of the HTTP request.
+    States of the HTTP request.
     """
 
     TOP = 0
     HEADER = 1
     BODY = 2
 
-    NEED_MORE_DATA = 4
-
 
 class Headers(ObjectDict, OverloadedDict, UnderscoreAccessDict, ItemDict):
+    """
+    Container for HTTP headers.
+    """
+
     def __init__(self, headers: dict = {}):
+        """
+        Initialize the headers.
+
+        Args:
+            headers: The headers to initialize with.
+        """
         super().__init__(headers)
 
     def _compile(self):
+        """
+        Compile the headers.
+        """
         return b"%s\r\n" % b"".join(
             b"%s: %s\r\n" % (k.raw, v.raw) for k, v in self.items()
         )
 
     @property
     def raw(self):
+        """
+        The raw headers.
+        """
         return self._compile()
 
 
@@ -51,6 +69,18 @@ class Message(ABC):
         headers: HeadersType = {},
         body: InpType = None,
     ):
+        """
+        Initializes an HTTP message.
+
+        Args:
+            protocol: The protocol of the HTTP message.
+            headers: The headers of the HTTP message.
+            body: The body of the HTTP message.
+
+        Note:
+            :py:class:`Message` is the base class for :py:class:`Request` and
+            :py:class:`Response`, and is not intended to be used directly.
+        """
         self.protocol = protocol
         self.headers = headers
         self.body = body
@@ -59,6 +89,13 @@ class Message(ABC):
         self.buffer = b""
 
     def __setattr__(self, name: str, value: Any):
+        """
+        Sets the value of the attribute. Defaults to ``toolbox.collections.Item``.
+
+        Args:
+            name: The name of the attribute.
+            value: The value of the attribute.
+        """
         if name == "headers":
             super().__setattr__(name, Headers(value))
         elif name in ("state", "buffer"):
@@ -66,10 +103,30 @@ class Message(ABC):
         else:
             super().__setattr__(name, Item(value))
 
-    def step_state(self) -> state:
+    def feed(self, msg: bytes):
+        """
+        Adds chuncks of the message to the internal buffer.
 
-        if not b"\r\n\r\n" in self.buffer:
-            self.state = state.NEED_MORE_DATA
+        Args:
+            msg: The message to add to the internal buffer.
+        """
+
+        # Checks the msg type:
+        if not isinstance(msg, bytes):
+            raise TypeError("Message must be bytes.")
+
+        self.buffer += msg
+
+    def step_state(self) -> state:
+        """
+        Steps the state of state machine.
+        """
+
+        if self.buffer.count(b"\r\n") == 0:
+            self.state = state.TOP
+            return self.state
+        elif self.buffer.count(b"\r\n") > 0 and b"\r\n\r\n" not in self.buffer:
+            self.state = state.HEADER
             return self.state
 
         self.state = state.TOP
@@ -96,35 +153,50 @@ class Message(ABC):
 
         return self.state
 
-    def feed(self, msg: bytes):
-        # Checks the msg type:
-        if not isinstance(msg, bytes):
-            raise TypeError("Message must be bytes.")
-
-        self.buffer += msg
-
     @abstractmethod
     def _parse_top(self, line: bytes):
+        """
+        Parses the first line of the HTTP message.
+        """
         raise NotImplementedError
 
     @classmethod
     def parse(cls, msg: bytes):
+        """
+        Parses a complete HTTP message.
+
+        Args:
+            msg: The message to parse.
+        """
         obj = cls()
         obj.feed(msg)
         return obj
 
     @abstractmethod
     def _compile_top(self):
+        """
+        Compiles the first line of the HTTP message.
+        """
         raise NotImplementedError
 
     def _compile(self):
+        """
+        Compiles a complete HTTP message.
+        """
         return b"%s%s%s" % (self._compile_top(), self.headers.raw, self.body.raw)
 
     @property
     def raw(self):
+        """
+        Returns the raw (bytes) HTTP message.
+        """
         return self._compile()
 
     def __str__(self):
+        """
+        Pretty-print of the HTTP message.
+        """
+
         if self.__class__ == Request:
             arrow = "→ "
         elif self.__class__ == Response:
@@ -147,6 +219,16 @@ class Request(Message):
         headers: HeadersType = {},
         body: InpType = None,
     ):
+        """
+        Initializes an HTTP request.
+
+        Args:
+            method: The method of the HTTP request.
+            target: The target of the HTTP request.
+            protocol: The protocol of the HTTP request.
+            headers: The headers of the HTTP request.
+            body: The body of the HTTP request.
+        """
         super().__init__(protocol, headers, body)
         self.method = method
         self.target = target
@@ -166,9 +248,15 @@ class Request(Message):
             self.state = state.BODY
 
     def _parse_top(self, line: bytes):
+        """
+        Parses the first line of the HTTP request.
+        """
         self.method, self.target, self.protocol = line.split(b" ")
 
     def _compile_top(self):
+        """
+        Compiles the first line of the HTTP request.
+        """
         return b"%s %s %s\r\n" % (self.method.raw, self.target.raw, self.protocol.raw)
 
 
@@ -184,6 +272,16 @@ class Response(Message):
         headers: HeadersType = {},
         body: InpType = None,
     ):
+        """
+        Initializes an HTTP response.
+
+        Args:
+            protocol: The protocol of the HTTP response.
+            status: The status of the HTTP response.
+            reason: The reason of the HTTP response.
+            headers: The headers of the HTTP response.
+            body: The body of the HTTP response.
+        """
         super().__init__(protocol, headers, body)
         self.status = status
         self.reason = reason
@@ -203,7 +301,13 @@ class Response(Message):
             self.state = state.BODY
 
     def _parse_top(self, line: bytes):
+        """
+        Parses the first line of the HTTP response.
+        """
         self.protocol, self.status, self.reason = line.split(b" ")
 
     def _compile_top(self):
+        """
+        Parses the first line of the HTTP response.
+        """
         return b"%s %s %s\r\n" % (self.protocol.raw, self.status.raw, self.reason.raw)

@@ -1,6 +1,6 @@
-# 💨 httpq
+# 🏃‍♂️ httpq
 
-A module to parse, modify, and compile HTTP/1.1 messages with a simple built-in state machine.
+A module to parse, modify, and compile HTTP/1.1 messages with a simple built-in state machine. It was build from the ground up with the intention of being quick, simple, and easy to use.
 
 ## Installing
 
@@ -14,11 +14,11 @@ Documentation can be found [here]().
 
 ## Using
 
-`httpq` is intended as a lightweight HTTP/1.1 parser and compiler. `httpq`'s job is to ensure that the message is properly structure, and give user access to an easy-to-use interface to view, manipulate, and compile HTTP messages. It is the job of the user to use `httpq` to perform HTTP/1.1 specific tasks.
-
-`httpq` has three different ways to initialize a `Request` or `Response` object:
+`httpq` has three methods to initialize a `httpq.Request` and `httpq.Response` object.
 
 #### `__init__`
+
+Easily initialize an HTTP message.
 
 ```python
 import httpq
@@ -42,6 +42,8 @@ resp = httpq.Response(
 
 #### `parse`
 
+Parses an entire raw HTTP message.
+
 ```python
 req = httpq.Request.parse(
     "GET /get HTTP/1.1\r\n"
@@ -59,9 +61,9 @@ resp = httpq.Response.parse(
 )
 ```
 
-Notice that `parse` takes a full message.
-
 #### `feed`
+
+Parse chunks of a raw HTTP message.
 
 ```python
 req = httpq.Request()
@@ -78,7 +80,9 @@ resp.feed("\r\n")
 resp.feed("Hello world!")
 ```
 
-The feed mechanism is useful when you want to parse a message in chunks, and manage a socket connection.
+The feed mechanism, different from the other two methods of initializing a message as it can be used with the built-in state machine. 
+
+When parsing a message from a stream the state machine keeps track of *where* in the message the parser is. This allows more advance parsing and mechanism to be built.
 
 ```python
 import socket
@@ -99,12 +103,13 @@ resp = httpq.Response()
 while resp.step_state() != httpq.state.BODY:
     resp.feed(s.recv(10))
 
-body = resp.body
-while len(body) != resp.headers["Content-Length"]:
+while len(resp.body) != resp.headers["Content-Length"]:
     body += s.recv(10)
 ```
 
-Note that we used the `step_state` method to advance the state machine until we reached the body, and thereafter, we read from the socket until the body is complete.
+Note that the feed mechanism is used in conjunction with the `step_state` method. This allows the state machine to be stepped through and the parser to be advanced. We can use this parse until the body of the message, and then use the captured headers to parse the body.
+
+### Modifying and Comparisons
 
 `httpq` also comes, out-of-the-box, with an intuitive method to modify and compare message values without caring about type:
 

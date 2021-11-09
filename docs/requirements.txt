@@ -1,0 +1,6 @@
+sphinx
+sphinx-copybutton
+sphinx-autobuild
+furo
+git+https://github.com/synchronizing/sphinx-autodoc-typehints.git
+git+https://github.com/synchronizing/httpq.git
