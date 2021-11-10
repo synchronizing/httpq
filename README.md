@@ -9,6 +9,10 @@
 <a href="https://synchronizing.github.io/httpq/">
     <img src="https://github.com/synchronizing/httpq/actions/workflows/docs-publish.yaml/badge.svg">
   </a>
+  
+  <a href="https://coveralls.io/github/synchronizing/httpq?branch=master">
+    <img src="https://coveralls.io/repos/github/synchronizing/httpq/badge.svg?branch=master">
+  </a>
 
   <a href="https://opensource.org/licenses/MIT">
     <img src="https://img.shields.io/badge/License-MIT-yellow.svg">
