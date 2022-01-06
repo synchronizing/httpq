@@ -37,8 +37,6 @@ Documentation can be found [here](https://synchronizing.github.io/httpq/).
 
 #### `__init__`
 
-Easily initialize an HTTP message.
-
 ```python
 import httpq
 
@@ -61,8 +59,6 @@ resp = httpq.Response(
 
 #### `parse`
 
-Parses an entire raw HTTP message.
-
 ```python
 req = httpq.Request.parse(
     b"GET /get HTTP/1.1\r\n"
@@ -82,8 +78,6 @@ resp = httpq.Response.parse(
 
 #### `feed`
 
-Parse chunks of a raw HTTP message.
-
 ```python
 req = httpq.Request()
 req.feed(b"GET /get HTTP/1.1\r\n")
@@ -99,9 +93,13 @@ resp.feed(b"\r\n")
 resp.feed(b"Hello world!")
 ```
 
-The feed mechanism, different from the other two methods of initializing a message, is intended to be used with the built-in state machine. 
+The feed mechanism comes with a simple built-in state machine. The state machine can be three states:
 
-When parsing a message from a stream the state machine keeps track of *where* in the message the parser is. This allows more advance parsing and mechanism to be built.
+* `TOP`: The feed cursor is at the top of the message.
+* `HEADER`: The feed cursor is at the headers.
+* `BODY`: The feed cursor is at the body.
+
+Once at the body it's the user's responsibility to keep track of the message length.
 
 ```python
 import socket
@@ -122,15 +120,16 @@ resp = httpq.Response()
 while resp.step_state() != httpq.state.BODY:
     resp.feed(s.recv(10))
 
-while len(resp.body) != resp.headers["Content-Length"]:
-    body += s.recv(10)
+# At this stage we have a response that has read the top line, and the headers.
+# With this, we can figure out the length of the body. In this case, using Content-Length.
+length = resp.headers["Content-Length"]
 ```
 
 Note that the feed mechanism is used in conjunction with the `step_state` method. This allows the state machine to be stepped through and the parser to be advanced. We can use this parse until the body of the message, and then use the captured headers to parse the body.
 
 ### Modifying and Comparisons
 
-`httpq` also comes, out-of-the-box, with an intuitive method to modify and compare message values without caring about type:
+`httpq` also comes with an intuitive method to modify and compare message values:
 
 ```python
 import httpq
