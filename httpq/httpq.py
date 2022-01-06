@@ -30,16 +30,7 @@ class Headers(ObjectDict, OverloadedDict, UnderscoreAccessDict, ItemDict):
     Container for HTTP headers.
     """
 
-    def __init__(self, headers: dict = {}):
-        """
-        Initialize the headers.
-
-        Args:
-            headers: The headers to initialize with.
-        """
-        super().__init__(headers)
-
-    def _compile(self):
+    def _compile(self) -> bytes:
         """
         Compile the headers.
         """
@@ -48,7 +39,7 @@ class Headers(ObjectDict, OverloadedDict, UnderscoreAccessDict, ItemDict):
         )
 
     @property
-    def raw(self):
+    def raw(self) -> bytes:
         """
         The raw headers.
         """
@@ -61,7 +52,7 @@ HeadersType = Union[Headers, dict]
 
 class Message(ABC):
 
-    __slots__ = ("protocol", "headers", "body", "state", "buffer")
+    __slots__ = ("protocol", "headers", "body", "buffer")
 
     def __init__(
         self,
@@ -84,8 +75,6 @@ class Message(ABC):
         self.protocol = protocol
         self.headers = headers
         self.body = body
-
-        self.state = state.TOP
         self.buffer = b""
 
     def __setattr__(self, name: str, value: Any):
@@ -98,7 +87,7 @@ class Message(ABC):
         """
         if name == "headers":
             super().__setattr__(name, Headers(value))
-        elif name in ("state", "buffer"):
+        elif name == "buffer":
             super().__setattr__(name, value)
         else:
             super().__setattr__(name, Item(value))
@@ -117,41 +106,40 @@ class Message(ABC):
 
         self.buffer += msg
 
-    def step_state(self) -> state:
+    @property
+    def state(self) -> state:
         """
-        Steps the state of state machine.
+        Retrieves the state of the HTTP message.
         """
 
-        if self.buffer.count(b"\r\n") == 0:
-            self.state = state.TOP
-            return self.state
-        elif self.buffer.count(b"\r\n") > 0 and b"\r\n\r\n" not in self.buffer:
-            self.state = state.HEADER
-            return self.state
+        if self.buffer.count(b"\r\n") > 0 and b"\r\n\r\n" not in self.buffer:
+            return state.HEADER
+        elif self.buffer.count(b"\r\n") == 0:
+            return state.TOP
 
-        self.state = state.TOP
+        current = state.TOP
         _, body = self.buffer.split(b"\r\n\r\n", 1)
 
         # Split the message into lines.
         for line in self.buffer.split(b"\r\n"):
 
             # Parses the first line of the HTTP/1.1 msg.
-            if self.state == state.TOP:
+            if current == state.TOP:
                 self._parse_top(line)
-                self.state = state.HEADER
+                current = state.HEADER
 
             # Parse the headers of the HTTP/1.1 msg.
-            elif self.state == state.HEADER:
+            elif current == state.HEADER:
                 if b":" in line:
                     key, value = line.split(b":", 1)
                     self.headers[key] = value.strip()
                 else:
-                    self.state = state.BODY
+                    current = state.BODY
 
-        if self.state == state.BODY:
+        if current == state.BODY:
             self.body = body
 
-        return self.state
+        return current
 
     @abstractmethod
     def _parse_top(self, line: bytes):  # pragma: no cover
@@ -161,7 +149,7 @@ class Message(ABC):
         raise NotImplementedError
 
     @classmethod
-    def parse(cls, msg: bytes):
+    def parse(cls, msg: bytes) -> "Message":
         """
         Parses a complete HTTP message.
 
@@ -170,30 +158,29 @@ class Message(ABC):
         """
         obj = cls()
         obj.feed(msg)
-        obj.step_state()
         return obj
 
     @abstractmethod
-    def _compile_top(self):  # pragma: no cover
+    def _compile_top(self) -> bytes:  # pragma: no cover
         """
         Compiles the first line of the HTTP message.
         """
         raise NotImplementedError
 
-    def _compile(self):
+    def _compile(self) -> bytes:
         """
         Compiles a complete HTTP message.
         """
         return b"%s%s%s" % (self._compile_top(), self.headers.raw, self.body.raw)
 
     @property
-    def raw(self):
+    def raw(self) -> bytes:
         """
         Returns the raw (bytes) HTTP message.
         """
         return self._compile()
 
-    def __str__(self):
+    def __str__(self) -> str:
         """
         Pretty-print of the HTTP message.
         """
@@ -236,14 +223,21 @@ class Request(Message):
 
         objs = [self.method, self.target, self.protocol]
         if all(obj == None for obj in objs):
-            self.state = state.TOP
+            self.buffer = b""
         elif all(obj for obj in objs):
-            self.state = state.HEADER
+            self.buffer = b"%s %s %s\r\n" % (
+                self.method.raw,
+                self.target.raw,
+                self.protocol.raw,
+            )
         else:
             raise ValueError("Request must have method, target, and protocol.")
 
-        if self.headers or self.body:
-            self.state = state.BODY
+        if self.headers:
+            self.buffer += self.headers.raw + b"\r\n\r\n"
+
+        if self.body:
+            self.buffer += self.body.raw
 
     def _parse_top(self, line: bytes):
         """
@@ -286,14 +280,21 @@ class Response(Message):
 
         objs = [self.protocol, self.status, self.reason]
         if all(obj == None for obj in objs):
-            self.state = state.TOP
+            self.buffer = b""
         elif all(obj for obj in objs):
-            self.state = state.HEADER
+            self.buffer = b"%s %s %s\r\n" % (
+                self.protocol.raw,
+                self.status.raw,
+                self.reason.raw,
+            )
         else:
             raise ValueError("Response must have protocol, status, and reason.")
 
-        if self.headers or self.body:
-            self.state = state.BODY
+        if self.headers:
+            self.buffer += self.headers.raw + b"\r\n\r\n"
+
+        if self.body:
+            self.buffer += self.body.raw
 
     def _parse_top(self, line: bytes):
         """
@@ -301,7 +302,7 @@ class Response(Message):
         """
         self.protocol, self.status, self.reason = line.split(b" ")
 
-    def _compile_top(self):
+    def _compile_top(self) -> bytes:
         """
         Parses the first line of the HTTP response.
         """

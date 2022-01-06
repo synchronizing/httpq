@@ -93,7 +93,7 @@ resp.feed(b"\r\n")
 resp.feed(b"Hello world!")
 ```
 
-The feed mechanism comes with a simple built-in state machine. The state machine can be three states:
+The feed mechanism comes with a simple built-in state machine. The state machine can be in one of three states:
 
 * `TOP`: The feed cursor is at the top of the message.
 * `HEADER`: The feed cursor is at the headers.
@@ -117,15 +117,17 @@ req = httpq.Request(
 s.sendall(req.raw)
 
 resp = httpq.Response()
-while resp.step_state() != httpq.state.BODY:
+while resp.state != httpq.state.BODY:
     resp.feed(s.recv(10))
 
-# At this stage we have a response that has read the top line, and the headers.
-# With this, we can figure out the length of the body. In this case, using Content-Length.
-length = resp.headers["Content-Length"]
+# At this stage we have a response that has read the top line and headers. It's the user's
+# responsibility to keep track of the rest of the message's length. In this case, we'll just
+# use the `Content-Length` header.
+while len(resp.body) != resp.headers["Content-Length"]:
+    body += s.recv(10)
 ```
 
-Note that the feed mechanism is used in conjunction with the `step_state` method. This allows the state machine to be stepped through and the parser to be advanced. We can use this parse until the body of the message, and then use the captured headers to parse the body.
+Note that the feed mechanism is used in conjunction with the `state` property. We can use this parse until the body of the message, and then use the captured headers to parse the body.
 
 ### Modifying and Comparisons
 

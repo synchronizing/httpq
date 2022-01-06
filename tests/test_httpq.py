@@ -16,6 +16,7 @@ class Test_Request:
         assert req.state == httpq.state.TOP
 
         req = httpq.Request(method="GET", target="/", protocol="HTTP/1.1")
+        print(req, req.state)
         assert req.state == httpq.state.HEADER
 
         req = httpq.Request(
@@ -41,20 +42,15 @@ class Test_Request:
 
     def test_request_feed(self):
         req = httpq.Request()
-        req.step_state()
         assert req.state == httpq.state.TOP
         req.feed(b"GET /get HTTP/1.1\r\n")
-        req.step_state()
         assert req.state == httpq.state.HEADER
         req.feed(b"Host: httpbin.org\r\n")
         req.feed(b"Content-Length: 18\r\n")
-        req.step_state()
         assert req.state == httpq.state.HEADER
         req.feed(b"\r\n")
-        req.step_state()
         assert req.state == httpq.state.BODY
         req.feed(b"Hello world!")
-        req.step_state()
         assert req.state == httpq.state.BODY
 
     def test_request_raw(self):
@@ -112,17 +108,13 @@ class Test_Response:
 
     def test_response_feed(self):
         resp = httpq.Response()
-        resp.step_state()
         assert resp.state == httpq.state.TOP
         resp.feed(b"HTTP/1.1 200 OK\r\n")
-        resp.step_state()
         assert resp.state == httpq.state.HEADER
         resp.feed(b"Content-Length: 18\r\n")
         resp.feed(b"\r\n")
-        resp.step_state()
         assert resp.state == httpq.state.BODY
         resp.feed(b"Hello world!")
-        resp.step_state()
         assert resp.state == httpq.state.BODY
 
         with pytest.raises(TypeError):
@@ -139,7 +131,7 @@ class Test_Response:
         assert resp.raw == b"HTTP/1.1 200 OK\r\nHello: World\r\n\r\nHello world"
 
     def test_response_str(self):
-        resp = resp = httpq.Response(
+        resp = httpq.Response(
             protocol="HTTP/1.1",
             status=200,
             reason="OK",

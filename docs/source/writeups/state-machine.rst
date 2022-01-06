@@ -2,18 +2,19 @@
 State Machine
 #############
 
-``httpq`` comes with a state machine that can be used to control a stream of data coming in from a socket, or socket-like object (io). A :py:class:`httpq.httpq.Message` has an internal variable called ``state`` that is used to keep track of the state of the message. There are three states, as defined in :py:class:`httpq.httpq.state`:
+`httpq` comes with a state machine that can be used to manage a data stream coming in from a socket, or socket-like object (io). A :py:class:`httpq.httpq.Message` has an internal variable called `state` that is used to keep track of the state of the message. There are three possible states the message can be in:
 
 .. autoclass:: httpq.httpq.state
     :members:
+    :noindex:
 
-    * ``TOP``: Message is at the top line.
-    * ``HEADERS``: Message is in the headers.
-    * ``BODY``: Message is in the body.
+    * `TOP`: Message is at the top line.
+    * `HEADERS`: Message is in the headers.
+    * `BODY`: Message is in the body.
 
-These states are used to determine how to handle the data that comes in from an io. Note that the state the message is in is its *current state* - that is to say, a ``Message`` starts in the ``TOP`` state and as data is fed into it, it will change state from ``TOP`` to ``HEADERS`` to ``BODY``.
+These states are used to determine how to handle the data that comes in from an io. Note that the state the message is in is its *current state* - that is to say, a `Message` starts in the `TOP` state, then moves on to `HEADERS`, and finally `BODY`.
 
-Since ``httpq`` is not a complete HTTP/1.1 tool it does not know when the body of the message has reached its end. Therefore, it's the job of the user to determine when the message is complete by either looking at the ``Content-Length`` or ``Transfer-Encoding`` header.
+Since `httpq` is not a complete HTTP/1.1 client it does not know when the body of the message has reached its end. It is the job of the developer to determine when the message is complete by either looking at the `Content-Length` or `Transfer-Encoding` header.
 
 Examples
 --------
@@ -37,7 +38,7 @@ Say you would like to send a request to a server, and receive back its response 
     s.sendall(req.raw)
 
     resp = httpq.Response()
-    while resp.step_state() != httpq.state.BODY:
+    while resp.state != httpq.state.BODY:
         resp.feed(s.recv(10))
 
     while len(resp.body) != resp.headers["Content-Length"]:
@@ -49,17 +50,17 @@ Take note of a few things. First, note how we receive the response in chunks (by
 
     ...
     resp = httpq.Response()
-    while resp.step_state() != httpq.state.BODY:
+    while resp.state != httpq.state.BODY:
         resp.feed(s.recv(10))
     ...
 
-The method in which we use to step the state machine (and in turn receive the current state of the message) is ``step_state``. This method returns the current state of the message, and can be used to determine how to handle the data as it comes in. For the sake of example, if we print out the current state of the message and its buffer we would see the following output:
+The property `state` returns the current state of the message, and can be used to determine how to handle the data as it comes in. For the sake of example, let's print out the current state of the message and its internal buffer:
 
 .. code-block:: python
 
     ...
     resp = httpq.Response()
-    while resp.step_state() != httpq.state.BODY:
+    while resp.state != httpq.state.BODY:
         print(resp.state, resp.buffer)
         resp.feed(s.recv(10))
 
@@ -100,4 +101,4 @@ Once we have reached the `BODY` state, there are no further states. This is usef
     while len(resp.body) != resp.headers["Content-Length"]:
         resp.body += s.recv(10)
 
-In this specific case we have decided to store the body into memory and assumed the server will always respond with the ``Content-Length`` header. This, in reality, is a very naive approach and is not recommended for more complex applications- it serves, however, as a good example on how one can then use a message in the `BODY` state to continue reading data until its termination.
+In this specific case we have decided to store the body into memory and assumed the server will always respond with the `Content-Length` header. 
