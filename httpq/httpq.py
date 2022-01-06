@@ -92,7 +92,7 @@ class Message(ABC):
         else:
             super().__setattr__(name, Item(value))
 
-    def feed(self, msg: bytes):
+    def feed(self, msg: bytes) -> state:
         """
         Adds chuncks of the message to the internal buffer.
 
@@ -105,6 +105,7 @@ class Message(ABC):
             raise TypeError("Message must be bytes.")
 
         self.buffer += msg
+        return self.state
 
     @property
     def state(self) -> state:
