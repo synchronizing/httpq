@@ -34,9 +34,7 @@ class Headers(ObjectDict, OverloadedDict, UnderscoreAccessDict, ItemDict):
         """
         Compile the headers.
         """
-        return b"%s\r\n" % b"".join(
-            b"%s: %s\r\n" % (k.raw, v.raw) for k, v in self.items()
-        )
+        return b"%s\r\n" % b"".join(b"%s: %s\r\n" % (k.raw, v.raw) for k, v in self.items())
 
     @property
     def raw(self) -> bytes:
@@ -193,7 +191,7 @@ class Message(ABC):
         else:  # pragma: no cover
             arrow = "? "
 
-        return arrow + arrow.join(self._compile().decode("utf-8").splitlines(True))
+        return arrow + arrow.join(self._compile().decode("utf-8").rstrip("\r\n").splitlines(True))
 
 
 class Request(Message):
