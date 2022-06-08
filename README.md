@@ -19,7 +19,7 @@
   </a>
 </p>
 
-A module to parse, modify, and compile HTTP/1.1 messages with a simple built-in state machine.
+httpq is a small (~32KB) package to parse, modify, and compile HTTP/1.1 messages with a built-in state machine.
 
 ## Installing
 
