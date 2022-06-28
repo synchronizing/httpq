@@ -4,15 +4,9 @@
 
 import enum
 from abc import ABC, abstractmethod
-from typing import Any, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 from toolbox.collections.item import Item, ItemType
-from toolbox.collections.mapping import (
-    ItemDict,
-    ObjectDict,
-    OverloadedDict,
-    UnderscoreAccessDict,
-)
 
 
 class state(enum.Enum):
@@ -27,23 +21,120 @@ class state(enum.Enum):
     INVALID = -1
 
 
-class Headers(ObjectDict, OverloadedDict, UnderscoreAccessDict, ItemDict):
+def convert(i: Union[dict, list, ItemType]) -> Dict[Item, Union[Item, List[Item]]]:
+    """
+    Recursively converts the input to a dictionary of :py:class:Item.
+
+    Raises:
+        TypeError: If the input is not a dictionary, list, or Item type.
+    """
+    if isinstance(i, dict):
+        return {convert(k): convert(v) for k, v in i.items()}
+    elif isinstance(i, list):
+        return [convert(v) for v in i]
+    elif isinstance(i, (bytes, str, int, bool, Item)):
+        return Item(i)
+    raise TypeError(i)
+
+
+class Headers(dict):
     """
     Container for HTTP headers.
     """
 
+    def __init__(self, dct: Optional[dict] = None, **kwargs):
+        """
+        Initializes the headers. Converts the keys & values to :py:class:Item.
+        """
+        super().__init__(convert(dct), **convert(kwargs))
+
     def _compile(self) -> bytes:
         """
-        Compile the headers.
+        Compiles the header.
         """
-        return b"%s\r\n" % b"".join(b"%s: %s\r\n" % (k.raw, v.raw) for k, v in self.items())
+        bfr = b""
+        for k, v in self.items():
+            if isinstance(v, Item):
+                v = v.raw
+            elif isinstance(v, list):
+                v = b", ".join((i.raw for i in v))
+            bfr += b"%s: %s\r\n" % (k.raw, v)
+        return bfr
 
     @property
     def raw(self) -> bytes:
         """
-        The raw headers.
+        Returns the raw (bytes) headers.
         """
         return self._compile()
+
+    def __setitem__(self, key, value):
+        """
+        Sets new key & values to items.
+        """
+        if key in self:
+            self[Item(key)].append(Item(value))
+        else:
+            super().__setitem__(Item(key), [Item(value)])
+
+    def __getitem__(self, key: Any) -> Any:
+        """
+        Allows for case-insensitive, and underscore to dash/space look-up. Returns
+         None when no key is found.
+
+        Notes:
+            Used in conjunction with :py:meth:`__getattr__` to get headers by name.
+            Allows gathering 'X-Foo' as 'headers.X_Foo', 'headers.x_foo',
+            'headers.X_FOO'.
+        """
+        options = [key.replace("_", " "), key.replace("_", "-")]
+        options += [option.upper() for option in options]
+        options += [option.lower() for option in options]
+        options += [option.title() for option in options]
+
+        for option in options:
+            if option in self:
+                return super().__getitem__(option)
+
+        return None
+
+    def __getattr__(self, key: Any) -> Any:
+        if key == "raw":
+            return super().__getattribute__(key)
+
+        return self.__getitem__(key)
+
+    def __add__(self, other: dict) -> dict:
+        new = {**Headers(self)}
+        for k, v in Headers(other).items():
+            if k in new:
+                new[k] = [new[k], v]
+            else:
+                new[k] = v
+        return new
+
+    def __iadd__(self, other: dict) -> dict:
+        self = self.__add__(other)
+        return self
+
+    def __sub__(self, other: dict) -> dict:
+        new = {**Headers(self)}
+        for k, v in Headers(other).items():
+            if k in new:
+                new[k] = [i for i in new[k] if i not in v]
+                if not new[k]:
+                    del new[k]
+        return Headers(new)
+
+    def __isub__(self, other: dict) -> dict:
+        self = self.__sub__(other)
+        return self
+
+    def __str__(self) -> str:
+        """
+        The string representation of the headers.
+        """
+        return self.raw.decode("utf-8")
 
 
 InpType = Optional[ItemType]
@@ -181,7 +272,11 @@ class Message(ABC):
         """
         Compiles a complete HTTP message.
         """
-        return b"%s%s%s" % (self._compile_top(), self.headers.raw, self.body.raw)
+        a = self._compile_top()
+        b = self.headers.raw
+        c = self.body.raw
+
+        return b"%s%s%s" % (a, b, c)
 
     @property
     def raw(self) -> bytes:
