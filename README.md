@@ -124,7 +124,32 @@ while resp.state != httpq.state.BODY:
 # responsibility to keep track of the rest of the message's length. In this case, we'll just
 # use the `Content-Length` header.
 while len(resp.body) != resp.headers["Content-Length"]:
-    body += s.recv(10)
+    resp.feed(s.recv(10))
+
+print(resp)
+```
+
+Outputs:
+
+```
+← HTTP/1.1 200 OK
+← Date: Sun, 12 Mar 2023 03:05:55 GMT
+← Content-Type: application/json
+← Content-Length: 197
+← Connection: keep-alive
+← Server: gunicorn/19.9.0
+← Access-Control-Allow-Origin: *
+← Access-Control-Allow-Credentials: true
+← 
+← {
+←   "args": {}, 
+←   "headers": {
+←     "Host": "httpbin.org", 
+←     "X-Amzn-Trace-Id": "Root=1-640d4193-650c50825ec4415732dacde8"
+←   }, 
+←   "origin": "xx.xx.xx.xxx", 
+←   "url": "http://httpbin.org/get"
+← }
 ```
 
 Note that the feed mechanism is used in conjunction with the `state` property. We can use this parse until the body of the message, and then use the captured headers to parse the body.
