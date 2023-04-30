@@ -159,8 +159,15 @@ class Message(ABC):
             elif current == state.HEADER:
                 if b":" in line:
                     key, value = line.split(b":", 1)
-                    if key not in self.headers or value.strip() not in self.headers[key]:
-                        self.headers.__defaultsetitem__(key, value.strip())
+
+                    if b"," in value:
+                        value = value.split(b",")
+                    else:
+                        value = [value]
+
+                    for v in value:
+                        if key not in self.headers or v.strip() not in self.headers[key]:
+                            self.headers.__defaultsetitem__(key, v.strip())
                 else:
                     current = state.BODY
 
