@@ -47,6 +47,29 @@ class Headers(ItemDict, ObjectDict, OverloadedDict, UnderscoreAccessDict, MultiE
 
         return b"%s\r\n" % b"".join(lines)
 
+    def __setitem__(self, key: Any, value: Any):
+        """
+        Sets the value of the item.
+
+        Args:
+            key: The key of the item.
+            value: The value of the item.
+        """
+        if key in self:
+            del self[key]
+
+        super().__setitem__(key, value)
+
+    def __defaultsetitem__(self, key: Any, value: Any):
+        """
+        Sets the value of the item without deleting the previous value.
+
+        Args:
+            key: The key of the item.
+            value: The value of the item.
+        """
+        super().__setitem__(key, value)
+
     @property
     def raw(self) -> bytes:
         """
@@ -137,7 +160,7 @@ class Message(ABC):
                 if b":" in line:
                     key, value = line.split(b":", 1)
                     if key not in self.headers or value.strip() not in self.headers[key]:
-                        self.headers[key] = value.strip()
+                        self.headers.__defaultsetitem__(key, value.strip())
                 else:
                     current = state.BODY
 
