@@ -2,18 +2,14 @@
 `httpq` implementation.
 """
 
+from __future__ import annotations
+
 import enum
 from abc import ABC, abstractmethod
 from typing import Any, Optional, Union
 
 from toolbox.collections.item import Item, ItemType
-from toolbox.collections.mapping import (
-    ItemDict,
-    ObjectDict,
-    OverloadedDict,
-    UnderscoreAccessDict,
-    MultiEntryDict,
-)
+from toolbox.collections.mapping import ItemDict, MultiEntryDict, ObjectDict, OverloadedDict, UnderscoreAccessDict
 
 
 class state(enum.Enum):
@@ -214,6 +210,12 @@ class Message(ABC):
         Returns the raw (bytes) HTTP message.
         """
         return self._compile()
+
+    def __eq__(self, other: Message) -> bool:
+        """
+        Compares two HTTP messages.
+        """
+        return self.raw == other.raw
 
     def __str__(self) -> str:
         """
