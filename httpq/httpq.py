@@ -12,6 +12,7 @@ from toolbox.collections.mapping import (
     ObjectDict,
     OverloadedDict,
     UnderscoreAccessDict,
+    MultiEntryDict,
 )
 
 
@@ -25,7 +26,8 @@ class state(enum.Enum):
     BODY = 2
 
 
-class Headers(ObjectDict, OverloadedDict, UnderscoreAccessDict, ItemDict):
+class Headers(ItemDict, ObjectDict, OverloadedDict, UnderscoreAccessDict, MultiEntryDict):
+
     """
     Container for HTTP headers.
     """
@@ -34,7 +36,16 @@ class Headers(ObjectDict, OverloadedDict, UnderscoreAccessDict, ItemDict):
         """
         Compile the headers.
         """
-        return b"%s\r\n" % b"".join(b"%s: %s\r\n" % (k.raw, v.raw) for k, v in self.items())
+        lines = []
+        for k, v in self.items():
+            if isinstance(v, list):
+                string = b"%s: " % k.raw + b", ".join([i.raw for i in self[k]]) + b"\r\n"
+            else:
+                string = b"%s: %s\r\n" % (k.raw, v.raw)
+
+            lines.append(string)
+
+        return b"%s\r\n" % b"".join(lines)
 
     @property
     def raw(self) -> bytes:
@@ -49,7 +60,6 @@ HeadersType = Union[Headers, dict]
 
 
 class Message(ABC):
-
     __slots__ = ("protocol", "headers", "body", "buffer")
 
     def __init__(
@@ -121,7 +131,6 @@ class Message(ABC):
 
         # Split the message into lines.
         for line in self.buffer.split(b"\r\n"):
-
             # Parses the first line of the HTTP/1.1 msg.
             if current == state.TOP:
                 self._parse_top(line)
@@ -195,7 +204,6 @@ class Message(ABC):
 
 
 class Request(Message):
-
     __slots__ = Message.__slots__ + ("method", "target")
 
     def __init__(
@@ -252,7 +260,6 @@ class Request(Message):
 
 
 class Response(Message):
-
     __slots__ = Message.__slots__ + ("status", "reason")
 
     def __init__(
