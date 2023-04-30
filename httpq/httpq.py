@@ -49,7 +49,7 @@ class Headers(ItemDict, ObjectDict, OverloadedDict, UnderscoreAccessDict, MultiE
 
     def __setitem__(self, key: Any, value: Any):
         """
-        Sets the value of the item.
+        Deletes the previous value of the item and sets the new value.
 
         Args:
             key: The key of the item.
