@@ -12,7 +12,6 @@ from toolbox.collections.mapping import (
     ObjectDict,
     OverloadedDict,
     UnderscoreAccessDict,
-    MultiEntryDict,
 )
 
 
@@ -26,8 +25,7 @@ class state(enum.Enum):
     BODY = 2
 
 
-class Headers(ItemDict, ObjectDict, OverloadedDict, UnderscoreAccessDict, MultiEntryDict):
-
+class Headers(ObjectDict, OverloadedDict, UnderscoreAccessDict, ItemDict):
     """
     Container for HTTP headers.
     """
@@ -36,39 +34,7 @@ class Headers(ItemDict, ObjectDict, OverloadedDict, UnderscoreAccessDict, MultiE
         """
         Compile the headers.
         """
-        lines = []
-        for k, v in self.items():
-            if isinstance(v, list):
-                string = b"%s: " % k.raw + b", ".join([i.raw for i in self[k]]) + b"\r\n"
-            else:
-                string = b"%s: %s\r\n" % (k.raw, v.raw)
-
-            lines.append(string)
-
-        return b"%s\r\n" % b"".join(lines)
-
-    def __setitem__(self, key: Any, value: Any):
-        """
-        Deletes the previous value of the item and sets the new value.
-
-        Args:
-            key: The key of the item.
-            value: The value of the item.
-        """
-        if key in self:
-            del self[key]
-
-        super().__setitem__(key, value)
-
-    def __defaultsetitem__(self, key: Any, value: Any):
-        """
-        Sets the value of the item without deleting the previous value.
-
-        Args:
-            key: The key of the item.
-            value: The value of the item.
-        """
-        super().__setitem__(key, value)
+        return b"%s\r\n" % b"".join(b"%s: %s\r\n" % (k.raw, v.raw) for k, v in self.items())
 
     @property
     def raw(self) -> bytes:
@@ -83,6 +49,7 @@ HeadersType = Union[Headers, dict]
 
 
 class Message(ABC):
+
     __slots__ = ("protocol", "headers", "body", "buffer")
 
     def __init__(
@@ -140,6 +107,10 @@ class Message(ABC):
 
     @property
     def state(self) -> state:
+        """
+        Retrieves the state of the HTTP message.
+        """
+
         if self.buffer.count(b"\r\n") > 0 and b"\r\n\r\n" not in self.buffer:
             return state.HEADER
         elif self.buffer.count(b"\r\n") == 0:
@@ -150,6 +121,7 @@ class Message(ABC):
 
         # Split the message into lines.
         for line in self.buffer.split(b"\r\n"):
+
             # Parses the first line of the HTTP/1.1 msg.
             if current == state.TOP:
                 self._parse_top(line)
@@ -159,8 +131,7 @@ class Message(ABC):
             elif current == state.HEADER:
                 if b":" in line:
                     key, value = line.split(b":", 1)
-                    if key not in self.headers or value.strip() not in self.headers[key]:
-                        self.headers.__defaultsetitem__(key, value.strip())
+                    self.headers[key] = value.strip()
                 else:
                     current = state.BODY
 
@@ -224,6 +195,7 @@ class Message(ABC):
 
 
 class Request(Message):
+
     __slots__ = Message.__slots__ + ("method", "target")
 
     def __init__(
@@ -280,6 +252,7 @@ class Request(Message):
 
 
 class Response(Message):
+
     __slots__ = Message.__slots__ + ("status", "reason")
 
     def __init__(

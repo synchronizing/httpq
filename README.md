@@ -44,11 +44,7 @@ req = httpq.Request(
     method="GET",
     target="/get",
     protocol="HTTP/1.1",
-    headers={
-        "Host": "httpbin.org",
-        "Content-Length": 12,
-        "Accept": ["Accept: application/json", "Accept: text/plain"],
-    },
+    headers={"Host": "httpbin.org", "Content-Length": 12},
     body="Hello world!",
 )
 
@@ -56,7 +52,7 @@ resp = httpq.Response(
     protocol="HTTP/1.1",
     status=200,
     reason="OK",
-    headers={"Content-Length": 12, "Content-Type": "text/plain"},
+    headers={"Content-Length": 12},
     body="Hello world!",
 )
 ```
@@ -68,8 +64,6 @@ req = httpq.Request.parse(
     b"GET /get HTTP/1.1\r\n"
     b"Host: httpbin.org\r\n"
     b"Content-Length: 12\r\n"
-    b"Accept: application/json\r\n"
-    b"Accept: text/plain\r\n"
     b"\r\n"
     b"Hello world!"
 )
@@ -77,7 +71,6 @@ req = httpq.Request.parse(
 resp = httpq.Response.parse(
     b"HTTP/1.1 200 OK\r\n"
     b"Content-Length: 12\r\n"
-    b"Content-Type: text/plain\r\n"
     b"\r\n"
     b"Hello world!"
 )
@@ -90,15 +83,12 @@ req = httpq.Request()
 req.feed(b"GET /get HTTP/1.1\r\n")
 req.feed(b"Host: httpbin.org\r\n")
 req.feed(b"Content-Length: 18\r\n")
-req.feed(b"Accept: application/json\r\n")
-req.feed(b"Accept: text/plain\r\n")
 req.feed(b"\r\n")
 req.feed(b"Hello world!")
 
 resp = httpq.Response()
 resp.feed(b"HTTP/1.1 200 OK\r\n")
 resp.feed(b"Content-Length: 12\r\n")
-resp.feed(b"Content-Type: text/plain\r\n")
 resp.feed(b"\r\n")
 resp.feed(b"Hello world!")
 ```
