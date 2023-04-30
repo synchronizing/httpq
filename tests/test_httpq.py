@@ -66,6 +66,20 @@ class Test_Request:
         with pytest.raises(TypeError):
             req.feed("hello")
 
+    def test_request_set(self):
+        req = httpq.Request(
+            method="GET",
+            target="/",
+            protocol="HTTP/1.1",
+            headers={"Hello": "World", "Ola": ["Mundo", "World"]},
+            body="Hello world",
+        )
+        assert req.method == "GET"
+        req.method = "POST"
+        assert req.method == "POST"
+        req.headers["Hello"] = "Mundo"
+        assert req.headers["Hello"] == "Mundo"
+
     def test_request_raw(self):
         req = httpq.Request(
             method="GET",
@@ -86,6 +100,28 @@ class Test_Request:
         )
         assert req.__str__() == "→ GET / HTTP/1.1\r\n→ Hello: World\r\n→ Ola: Mundo, World\r\n→ \r\n→ Hello world"
 
+    def test_request_eq(self):
+        req1 = httpq.Request.parse(
+            b"GET /get HTTP/1.1\r\n"
+            b"Host: httpbin.org\r\n"
+            b"Content-Length: 12\r\n"
+            b"Accept: application/json, text/plain\r\n"
+            b"\r\n"
+            b"Hello world!"
+        )
+
+        req2 = httpq.Request.parse(
+            b"GET /get HTTP/1.1\r\n"
+            b"Host: httpbin.org\r\n"
+            b"Content-Length: 12\r\n"
+            b"Accept: application/json\r\n"
+            b"Accept: text/plain\r\n"
+            b"\r\n"
+            b"Hello world!"
+        )
+
+        print(req1 == req2)
+
 
 class Test_Response:
     # Test all of the same things as the request class
@@ -103,7 +139,7 @@ class Test_Response:
             protocol="HTTP/1.1",
             status=200,
             reason="OK",
-            headers={"Hello": "World"},
+            headers={"Hello": "World", "Mundo": ["Ola", "Hello"]},
             body="Hello world",
         )
         assert resp.state == httpq.state.BODY
@@ -140,6 +176,20 @@ class Test_Response:
         with pytest.raises(TypeError):
             resp.feed("hello")
 
+    def test_response_set(self):
+        resp = httpq.Response(
+            protocol="HTTP/1.1",
+            status=200,
+            reason="OK",
+            headers={"Hello": "World"},
+            body="Hello world",
+        )
+        assert resp.protocol == "HTTP/1.1"
+        resp.protocol = "HTTP/1.0"
+        assert resp.protocol == "HTTP/1.0"
+        resp.headers["Hello"] = "Mundo"
+        assert resp.headers["Hello"] == "Mundo"
+
     def test_response_raw(self):
         resp = httpq.Response(
             protocol="HTTP/1.1",
@@ -159,3 +209,23 @@ class Test_Response:
             body="Hello world",
         )
         assert resp.__str__() == "← HTTP/1.1 200 OK\r\n← Hello: World\r\n← Ola: Mundo, World\r\n← \r\n← Hello world"
+
+    def test_response_eq(self):
+        resp1 = httpq.Response.parse(
+            b"HTTP/1.1 200 OK\r\n"
+            b"Content-Length: 12\r\n"
+            b"Accept: application/json, text/plain\r\n"
+            b"\r\n"
+            b"Hello world!"
+        )
+
+        resp2 = httpq.Response.parse(
+            b"HTTP/1.1 200 OK\r\n"
+            b"Content-Length: 12\r\n"
+            b"Accept: application/json\r\n"
+            b"Accept: text/plain\r\n"
+            b"\r\n"
+            b"Hello world!"
+        )
+
+        print(resp1 == resp2)
