@@ -2,17 +2,14 @@
 `httpq` implementation.
 """
 
+from __future__ import annotations
+
 import enum
 from abc import ABC, abstractmethod
 from typing import Any, Optional, Union
 
 from toolbox.collections.item import Item, ItemType
-from toolbox.collections.mapping import (
-    ItemDict,
-    ObjectDict,
-    OverloadedDict,
-    UnderscoreAccessDict,
-)
+from toolbox.collections.mapping import ItemDict, MultiEntryDict, ObjectDict, OverloadedDict, UnderscoreAccessDict
 
 
 class state(enum.Enum):
@@ -25,7 +22,8 @@ class state(enum.Enum):
     BODY = 2
 
 
-class Headers(ObjectDict, OverloadedDict, UnderscoreAccessDict, ItemDict):
+class Headers(ItemDict, ObjectDict, OverloadedDict, UnderscoreAccessDict, MultiEntryDict):
+
     """
     Container for HTTP headers.
     """
@@ -34,7 +32,39 @@ class Headers(ObjectDict, OverloadedDict, UnderscoreAccessDict, ItemDict):
         """
         Compile the headers.
         """
-        return b"%s\r\n" % b"".join(b"%s: %s\r\n" % (k.raw, v.raw) for k, v in self.items())
+        lines = []
+        for k, v in self.items():
+            if isinstance(v, list):
+                string = b"%s: " % k.raw + b", ".join([i.raw for i in self[k]]) + b"\r\n"
+            else:
+                string = b"%s: %s\r\n" % (k.raw, v.raw)
+
+            lines.append(string)
+
+        return b"%s\r\n" % b"".join(lines)
+
+    def __setitem__(self, key: Any, value: Any):
+        """
+        Deletes the previous value of the item and sets the new value.
+
+        Args:
+            key: The key of the item.
+            value: The value of the item.
+        """
+        if key in self:
+            del self[key]
+
+        super().__setitem__(key, value)
+
+    def __defaultsetitem__(self, key: Any, value: Any):
+        """
+        Sets the value of the item without deleting the previous value.
+
+        Args:
+            key: The key of the item.
+            value: The value of the item.
+        """
+        super().__setitem__(key, value)
 
     @property
     def raw(self) -> bytes:
@@ -49,7 +79,6 @@ HeadersType = Union[Headers, dict]
 
 
 class Message(ABC):
-
     __slots__ = ("protocol", "headers", "body", "buffer")
 
     def __init__(
@@ -107,10 +136,6 @@ class Message(ABC):
 
     @property
     def state(self) -> state:
-        """
-        Retrieves the state of the HTTP message.
-        """
-
         if self.buffer.count(b"\r\n") > 0 and b"\r\n\r\n" not in self.buffer:
             return state.HEADER
         elif self.buffer.count(b"\r\n") == 0:
@@ -121,7 +146,6 @@ class Message(ABC):
 
         # Split the message into lines.
         for line in self.buffer.split(b"\r\n"):
-
             # Parses the first line of the HTTP/1.1 msg.
             if current == state.TOP:
                 self._parse_top(line)
@@ -131,7 +155,15 @@ class Message(ABC):
             elif current == state.HEADER:
                 if b":" in line:
                     key, value = line.split(b":", 1)
-                    self.headers[key] = value.strip()
+
+                    if b"," in value:
+                        value = value.split(b",")
+                    else:
+                        value = [value]
+
+                    for v in value:
+                        if key not in self.headers or v.strip() not in self.headers[key]:
+                            self.headers.__defaultsetitem__(key, v.strip())
                 else:
                     current = state.BODY
 
@@ -179,6 +211,12 @@ class Message(ABC):
         """
         return self._compile()
 
+    def __eq__(self, other: Message) -> bool:
+        """
+        Compares two HTTP messages.
+        """
+        return self.raw == other.raw
+
     def __str__(self) -> str:
         """
         Pretty-print of the HTTP message.
@@ -195,7 +233,6 @@ class Message(ABC):
 
 
 class Request(Message):
-
     __slots__ = Message.__slots__ + ("method", "target")
 
     def __init__(
@@ -252,7 +289,6 @@ class Request(Message):
 
 
 class Response(Message):
-
     __slots__ = Message.__slots__ + ("status", "reason")
 
     def __init__(
