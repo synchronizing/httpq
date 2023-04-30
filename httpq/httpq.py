@@ -117,10 +117,6 @@ class Message(ABC):
 
     @property
     def state(self) -> state:
-        """
-        Retrieves the state of the HTTP message.
-        """
-
         if self.buffer.count(b"\r\n") > 0 and b"\r\n\r\n" not in self.buffer:
             return state.HEADER
         elif self.buffer.count(b"\r\n") == 0:
@@ -140,7 +136,8 @@ class Message(ABC):
             elif current == state.HEADER:
                 if b":" in line:
                     key, value = line.split(b":", 1)
-                    self.headers[key] = value.strip()
+                    if key not in self.headers or value.strip() not in self.headers[key]:
+                        self.headers[key] = value.strip()
                 else:
                     current = state.BODY
 
