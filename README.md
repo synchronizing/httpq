@@ -47,7 +47,7 @@ req = httpq.Request(
     headers={
         "Host": "httpbin.org",
         "Content-Length": 12,
-        "Accept": ["Accept: application/json", "Accept: text/plain"],
+        "Accept": ["application/json", "text/plain"],
     },
     body="Hello world!",
 )
