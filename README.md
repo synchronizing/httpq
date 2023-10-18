@@ -2,11 +2,15 @@
 
 <p align="center">
 
+  <a href="https://www.pepy.tech/projects/httpq">
+    <img src="https://static.pepy.tech/badge/httpq">
+  </a>
+
   <a href="https://github.com/synchronizing/httpq/actions/workflows/pytest-cover-run.yaml">
     <img src="https://github.com/synchronizing/httpq/actions/workflows/pytest-cover-run.yaml/badge.svg">
   </a>
 
-<a href="https://synchronizing.github.io/httpq/">
+  <a href="https://synchronizing.github.io/httpq/">
     <img src="https://github.com/synchronizing/httpq/actions/workflows/docs-publish.yaml/badge.svg">
   </a>
   
